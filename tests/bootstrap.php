@@ -1,6 +1,6 @@
 <?php
 /**
- * PHP_BitTorrent
+ * PHP BitTorrent
  *
  * Copyright (c) 2011 Christer Edvartsen <cogo@starzinger.net>
  *
@@ -22,20 +22,22 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  *
- * @package PHP_BitTorrent
+ * @package Decoder
  * @author Christer Edvartsen <cogo@starzinger.net>
  * @copyright Copyright (c) 2011, Christer Edvartsen
  * @license http://www.opensource.org/licenses/mit-license MIT License
  */
 
-/**
- * Exception class for the Sqlite storage adapter
- *
- * @package PHP_BitTorrent
- * @author Christer Edvartsen <cogo@starzinger.net>
- * @copyright Copyright (c) 2011, Christer Edvartsen
- * @license http://www.opensource.org/licenses/mit-license MIT License
- */
-class PHP_BitTorrent_Tracker_StorageAdapter_Sqlite_Exception extends PHP_BitTorrent_Tracker_StorageAdapter_Exception {
+// Autoloader for namespaced classes in the include_path
+spl_autoload_register(function($className) {
+    $filename = str_replace('\\', '/', $className) . '.php';
 
-}
+    foreach (explode(PATH_SEPARATOR, get_include_path()) as $path) {
+        $absPath = rtrim($path, '/') . '/' . $filename;
+
+        if (is_file($absPath)) {
+            require $absPath;
+            return true;
+        }
+    }
+});
