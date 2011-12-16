@@ -1,6 +1,6 @@
 <?php
 /**
- * PHP_BitTorrent
+ * PHP BitTorrent
  *
  * Copyright (c) 2011 Christer Edvartsen <cogo@starzinger.net>
  *
@@ -22,33 +22,33 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  *
- * @package PHP_BitTorrent
- * @subpackage UnitTests
+ * @package UnitTests
  * @author Christer Edvartsen <cogo@starzinger.net>
  * @copyright Copyright (c) 2011, Christer Edvartsen
  * @license http://www.opensource.org/licenses/mit-license MIT License
  */
 
+namespace PHP\BitTorrent\Tracker;
+
 /**
- * @package PHP_BitTorrent
- * @subpackage UnitTests
+ * @package UnitTests
  * @author Christer Edvartsen <cogo@starzinger.net>
  * @copyright Copyright (c) 2011, Christer Edvartsen
  * @license http://www.opensource.org/licenses/mit-license MIT License
  */
-class PHP_BitTorrent_Tracker_PeerTest extends PHPUnit_Framework_TestCase {
+class PeerTest extends \PHPUnit_Framework_TestCase {
     /**
      * Peer object
      *
-     * @var PHP_BitTorrent_Tracker_Peer
+     * @var PHP\BitTorrent\Tracker\Peer
      */
-    protected $peer = null;
+    private $peer;
 
     /**
      * Set up method that creates a fresh peer objet before each test
      */
     public function setUp() {
-        $this->peer = new PHP_BitTorrent_Tracker_Peer();
+        $this->peer = new Peer();
     }
 
     /**
@@ -61,48 +61,42 @@ class PHP_BitTorrent_Tracker_PeerTest extends PHPUnit_Framework_TestCase {
     public function testSetGetIp() {
         $this->assertNull($this->peer->getIp());
         $ip = '127.0.0.1';
-        $this->peer->setIp($ip);
+        $this->assertSame($this->peer, $this->peer->setIp($ip));
         $this->assertSame($ip, $this->peer->getIp());
     }
 
     public function testSetGetId() {
         $this->assertNull($this->peer->getId());
         $id = 'Peer id';
-        $this->peer->setId($id);
+        $this->assertSame($this->peer, $this->peer->setId($id));
         $this->assertSame($id, $this->peer->getId());
     }
 
     public function testSetGetPort() {
         $this->assertNull($this->peer->getPort());
         $port = 6666;
-        $this->peer->setPort($port);
+        $this->assertSame($this->peer, $this->peer->setPort($port));
         $this->assertSame($port, $this->peer->getPort());
-    }
-
-    public function testSetGetPortAsString() {
-        $port = '6666';
-        $this->peer->setPort($port);
-        $this->assertSame((int) $port, $this->peer->getPort());
     }
 
     public function testSetGetDownloaded() {
         $this->assertNull($this->peer->getDownloaded());
         $downloaded = 42;
-        $this->peer->setDownloaded($downloaded);
+        $this->assertSame($this->peer, $this->peer->setDownloaded($downloaded));
         $this->assertSame($downloaded, $this->peer->getDownloaded());
     }
 
     public function testSetGetUploaded() {
         $this->assertNull($this->peer->getUploaded());
         $uploaded = 42;
-        $this->peer->setUploaded($uploaded);
+        $this->assertSame($this->peer, $this->peer->setUploaded($uploaded));
         $this->assertSame($uploaded, $this->peer->getUploaded());
     }
 
     public function testSetGetLeft() {
         $this->assertNull($this->peer->getLeft());
         $left = 42;
-        $this->peer->setLeft($left);
+        $this->assertSame($this->peer, $this->peer->setLeft($left));
         $this->assertSame($left, $this->peer->getLeft());
     }
 

@@ -1,6 +1,6 @@
 <?php
 /**
- * PHP_BitTorrent
+ * PHP BitTorrent
  *
  * Copyright (c) 2011 Christer Edvartsen <cogo@starzinger.net>
  *
@@ -22,68 +22,70 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  *
- * @package PHP_BitTorrent
+ * @package Tracker
  * @author Christer Edvartsen <cogo@starzinger.net>
  * @copyright Copyright (c) 2011, Christer Edvartsen
  * @license http://www.opensource.org/licenses/mit-license MIT License
  */
 
+namespace PHP\BitTorrent\Tracker;
+
 /**
  * This class represents a peer that is connected to the BitTorrent tracker
  *
- * @package PHP_BitTorrent
+ * @package Tracker
  * @author Christer Edvartsen <cogo@starzinger.net>
  * @copyright Copyright (c) 2011, Christer Edvartsen
  * @license http://www.opensource.org/licenses/mit-license MIT License
  */
-class PHP_BitTorrent_Tracker_Peer {
+class Peer {
     /**
      * Ip address of the peer
      *
      * @var string
      */
-    protected $ip = null;
+    private $ip;
 
     /**
      * ID of the peer
      *
      * @var string
      */
-    protected $id = null;
+    private $id;
 
     /**
      * Port number the peer uses
      *
      * @var int
      */
-    protected $port = null;
+    private $port;
 
     /**
      * Number of bytes the peer has downloaded
      *
      * @var int
      */
-    protected $downloaded = null;
+    private $downloaded;
 
     /**
      * Number of bytes the peer has uploaded
      *
      * @var int
      */
-    protected $uploaded = null;
+    private $uploaded;
 
     /**
      * Number of bytes the peer has left to download
      *
      * @var int
      */
-    protected $left = null;
+    private $left;
 
     /**
      * Set the ip property
      *
-     * @param string $ip
-     * @return PHP_BitTorrent_Tracker_Peer
+     * @param string $ip The ip address to set
+     * @return PHP\BitTorrent\Tracker\Peer
      */
     public function setIp($ip) {
         $this->ip = $ip;
@@ -103,8 +105,8 @@ class PHP_BitTorrent_Tracker_Peer {
     /**
      * Set the peer ID
      *
-     * @param string $id
-     * @return PHP_BitTorrent_Tracker_Peer
+     * @param string $id The ID of the peer
+     * @return PHP\BitTorrent\Tracker\Peer
      */
     public function setId($id) {
         $this->id = $id;
@@ -124,8 +126,8 @@ class PHP_BitTorrent_Tracker_Peer {
     /**
      * Set the port number
      *
-     * @param int $port
-     * @return PHP_BitTorrent_Tracker_Peer
+     * @param int $port The port the peer uses
+     * @return PHP\BitTorrent\Tracker\Peer
      */
     public function setPort($port) {
         $this->port = (int) $port;
@@ -145,8 +147,8 @@ class PHP_BitTorrent_Tracker_Peer {
     /**
      * Set the downloaded property
      *
-     * @param int $downloaded
-     * @return PHP_BitTorrent_Tracker_Peer
+     * @param int $downloaded How much has the peer has downloaded
+     * @return PHP\BitTorrent\Tracker\Peer
      */
     public function setDownloaded($downloaded) {
         $this->downloaded = (int) $downloaded;
@@ -166,8 +168,8 @@ class PHP_BitTorrent_Tracker_Peer {
     /**
      * Set the uploaded property
      *
-     * @param int $uploaded
-     * @return PHP_BitTorrent_Tracker_Peer
+     * @param int $uploaded How much the peer has uploaded
+     * @return PHP\BitTorrent\Tracker\Peer
      */
     public function setUploaded($uploaded) {
         $this->uploaded = (int) $uploaded;
@@ -187,8 +189,8 @@ class PHP_BitTorrent_Tracker_Peer {
     /**
      * Set the left property
      *
-     * @param int $left
-     * @return PHP_BitTorrent_Tracker_Peer
+     * @param int $left How much the peer has left to download
+     * @return PHP\BitTorrent\Tracker\Peer
      */
     public function setLeft($left) {
         $this->left = (int) $left;
