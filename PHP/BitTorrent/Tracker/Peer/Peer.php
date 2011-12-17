@@ -22,7 +22,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  *
- * @package Tracker
+ * @package Peer
+ * @subpackage Tracker
  * @author Christer Edvartsen <cogo@starzinger.net>
  * @copyright Copyright (c) 2011, Christer Edvartsen
  * @license http://www.opensource.org/licenses/mit-license MIT License
@@ -30,15 +31,18 @@
 
 namespace PHP\BitTorrent\Tracker;
 
+use InvalidArgumentException;
+
 /**
  * This class represents a peer that is connected to the BitTorrent tracker
  *
- * @package Tracker
+ * @package Peer
+ * @subpackage Tracker
  * @author Christer Edvartsen <cogo@starzinger.net>
  * @copyright Copyright (c) 2011, Christer Edvartsen
  * @license http://www.opensource.org/licenses/mit-license MIT License
  */
-class Peer {
+class Peer implements PeerInterface {
     /**
      * Ip address of the peer
      *
@@ -79,13 +83,10 @@ class Peer {
      *
      * @var int
      */
-    private $left;
+    private $hasLeft;
 
     /**
-     * Set the ip property
-     *
-     * @param string $ip The ip address to set
-     * @return PHP\BitTorrent\Tracker\Peer
+     * @see PHP\BitTorrent\Tracker\Peer\PeerInterface::setIp()
      */
     public function setIp($ip) {
         $this->ip = $ip;
@@ -94,61 +95,58 @@ class Peer {
     }
 
     /**
-     * Get the ip
-     *
-     * @return string
+     * @see PHP\BitTorrent\Tracker\Peer\PeerInterface::getIp()
      */
     public function getIp() {
         return $this->ip;
     }
 
     /**
-     * Set the peer ID
-     *
-     * @param string $id The ID of the peer
-     * @return PHP\BitTorrent\Tracker\Peer
+     * @see PHP\BitTorrent\Tracker\Peer\PeerInterface::setId()
      */
     public function setId($id) {
+        $id = $this->escape($id);
+
+        if (strlen($id) !== 20) {
+            throw new InvalidArgumentException('Invalid peer id: ' . $id);
+        }
+
         $this->id = $id;
 
         return $this;
     }
 
     /**
-     * Get the peer ID
-     *
-     * @return string
+     * @see PHP\BitTorrent\Tracker\Peer\PeerInterface::getId()
      */
     public function getId() {
         return $this->id;
     }
 
     /**
-     * Set the port number
-     *
-     * @param int $port The port the peer uses
-     * @return PHP\BitTorrent\Tracker\Peer
+     * @see PHP\BitTorrent\Tracker\Peer\PeerInterface::setPort()
      */
     public function setPort($port) {
-        $this->port = (int) $port;
+        $port = (int) $port;
+
+        if (!$port || $port > 65535) {
+            throw new InvalidArgumentException('Invalid port: ' . $port);
+        }
+
+        $this->port = $port;
 
         return $this;
     }
 
     /**
-     * Get the port
-     *
-     * @return int
+     * @see PHP\BitTorrent\Tracker\Peer\PeerInterface::getPort()
      */
     public function getPort() {
         return $this->port;
     }
 
     /**
-     * Set the downloaded property
-     *
-     * @param int $downloaded How much has the peer has downloaded
-     * @return PHP\BitTorrent\Tracker\Peer
+     * @see PHP\BitTorrent\Tracker\Peer\PeerInterface::setDownloaded()
      */
     public function setDownloaded($downloaded) {
         $this->downloaded = (int) $downloaded;
@@ -157,19 +155,14 @@ class Peer {
     }
 
     /**
-     * Get the downloaded property
-     *
-     * @return int
+     * @see PHP\BitTorrent\Tracker\Peer\PeerInterface::getDownloaded()
      */
     public function getDownloaded() {
         return $this->downloaded;
     }
 
     /**
-     * Set the uploaded property
-     *
-     * @param int $uploaded How much the peer has uploaded
-     * @return PHP\BitTorrent\Tracker\Peer
+     * @see PHP\BitTorrent\Tracker\Peer\PeerInterface::setUploaded()
      */
     public function setUploaded($uploaded) {
         $this->uploaded = (int) $uploaded;
@@ -178,56 +171,45 @@ class Peer {
     }
 
     /**
-     * Get the uploaded property
-     *
-     * @return int
+     * @see PHP\BitTorrent\Tracker\Peer\PeerInterface::getUploaded()
      */
     public function getUploaded() {
         return $this->uploaded;
     }
 
     /**
-     * Set the left property
-     *
-     * @param int $left How much the peer has left to download
-     * @return PHP\BitTorrent\Tracker\Peer
+     * @see PHP\BitTorrent\Tracker\Peer\PeerInterface::setHasLeft()
      */
-    public function setLeft($left) {
-        $this->left = (int) $left;
+    public function setHasLeft($hasLeft) {
+        $this->hasLeft = (int) $hasLeft;
 
         return $this;
     }
 
     /**
-     * Get the left property
-     *
-     * @return int
+     * @see PHP\BitTorrent\Tracker\Peer\PeerInterface::getHasLeft()
      */
-    public function getLeft() {
-        return $this->left;
+    public function getHasLeft() {
+        return $this->hasLeft;
     }
 
     /**
-     * See if the peer is a seed
-     *
-     * If the left property is (int) 0, the peer is a seed
-     *
-     * @return boolean
+     * @see PHP\BitTorrent\Tracker\Peer\PeerInterface::isSeed()
      */
     public function isSeed() {
         return ($this->left === 0);
     }
 
     /**
-     * See if the peer is connectable by making a connection to it on the ip:port it provides.
-     *
-     * @return boolean
+     * @see PHP\BitTorrent\Tracker\Peer\PeerInterface::isConnectable()
      */
     public function isConnectable() {
         $errno  = null;
         $errstr = null;
 
-        $sp = @fsockopen($this->getIp(), $this->getPort(), $errno, $errstr);
+        set_error_handler(function() { return true; });
+        $sp = fsockopen($this->getIp(), $this->getPort(), $errno, $errstr);
+        restore_error_handler();
 
         if (!$sp) {
             return false;
@@ -236,5 +218,15 @@ class Peer {
         fclose($sp);
 
         return true;
+    }
+
+    /**
+     * Escape data from the request
+     *
+     * @param string $data Data to escape
+     * @return string
+     */
+    private function escape($data) {
+        return stripslashes($data);
     }
 }
