@@ -1,6 +1,6 @@
 <?php
 /**
- * PHP_BitTorrent
+ * PHP BitTorrent
  *
  * Copyright (c) 2011 Christer Edvartsen <cogo@starzinger.net>
  *
@@ -22,131 +22,60 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  *
- * @package PHP_BitTorrent
+ * @package Response
+ * @subpackage Tracker
  * @author Christer Edvartsen <cogo@starzinger.net>
  * @copyright Copyright (c) 2011, Christer Edvartsen
  * @license http://www.opensource.org/licenses/mit-license MIT License
  */
 
+namespace PHP\BitTorrent\Tracker\Response;
+
+use PHP\BitTorrent\Tracker\Peer\PeerInterface as Peer,
+    PHP\BitTorrent\Encoder;
+
 /**
  * Class representing a response from the tracker
  *
- * @package PHP_BitTorrent
+ * @package Response
+ * @subpackage Tracker
  * @author Christer Edvartsen <cogo@starzinger.net>
  * @copyright Copyright (c) 2011, Christer Edvartsen
  * @license http://www.opensource.org/licenses/mit-license MIT License
  */
-class PHP_BitTorrent_Tracker_Response {
+class Response implements ResponseInterface {
     /**
      * Interval in the response
      *
      * @var int
      */
-    protected $interval = 3600;
+    private $interval = 3600;
 
     /**
      * Peers in the response
      *
      * @var array Array of PHP_BitTorrent_Tracker_Response objects
      */
-    protected $peers = array();
+    private $peers = array();
 
     /**
      * Wether or not to include the peer id in the response
      *
      * @var boolean
      */
-    protected $noPeerId = false;
+    private $noPeerId = false;
 
     /**
      * Wether or not to generate a compact response
      *
      * @var boolean
      */
-    protected $compact = false;
+    private $compact = false;
 
     /**
-     * Set the interval in the response
-     *
-     * @param int $interval
-     * @return PHP_BitTorrent_Tracker_Response
+     * @see PHP\BitTorrent\Tracker\Response\ResponseInterface::addPeers()
      */
-    public function setInterval($interval) {
-        $this->interval = (int) $interval;
-
-        return $this;
-    }
-
-    /**
-     * Set the noPeerId flag
-     *
-     * @param boolean $flag
-     * @return PHP_BitTorrent_Tracker_Response
-     */
-    public function setNoPeerId($flag) {
-        $this->noPeerId = (bool) $flag;
-
-        return $this;
-    }
-
-    /**
-     * Get the noPeerId flag
-     *
-     * @return boolean
-     */
-    public function getNoPeerId() {
-        return $this->noPeerId;
-    }
-
-    /**
-     * Set the compatct flag
-     *
-     * @param boolean $flag
-     * @return PHP_BitTorrent_Tracker_Response
-     */
-    public function setCompact($flag) {
-        $this->compact = (bool) $flag;
-
-        return $this;
-    }
-
-    /**
-     * Get the compact flag
-     *
-     * @return boolean
-     */
-    public function getCompact() {
-        return $this->compact;
-    }
-
-    /**
-     * Get the interval in the response
-     *
-     * @return int
-     */
-    public function getInterval() {
-        return $this->interval;
-    }
-
-    /**
-     * Add a peer to the response
-     *
-     * @param PHP_BitTorrent_Tracker_Peer $peer
-     * @return PHP_BitTorrent_Tracker_Response
-     */
-    public function addPeer(PHP_BitTorrent_Tracker_Peer $peer) {
-        $this->peers[] = $peer;
-
-        return $this;
-    }
-
-    /**
-     * Add peers
-     *
-     * @param array $peers Array of PHP_BitTorrent_Tracker_Peer objects
-     * @return PHP_BitTorrent_Tracker_Response
-     */
-    public function addPeers($peers = array()) {
+    public function addPeers(array $peers) {
         foreach ($peers as $peer) {
             $this->addPeer($peer);
         }
@@ -155,23 +84,45 @@ class PHP_BitTorrent_Tracker_Response {
     }
 
     /**
-     * Get all peers
-     *
-     * @return array Array of PHP_BitTorrent_Tracker_Peer objects
+     * @see PHP\BitTorrent\Tracker\Response\ResponseInterface::addPeer()
      */
-    public function getPeers() {
-        return $this->peers;
+    public function addPeer(Peer $peer) {
+        $this->peers[] = $peer;
+
+        return $this;
     }
 
     /**
-     * Magic to string method
-     *
-     * This method generates a string of the current response object that can be sent to a
-     * BitTorrent client (BitTorrent encoded dictionary).
-     *
-     * @return string
+     * @see PHP\BitTorrent\Tracker\Response\ResponseInterface::setInterval()
      */
-    public function __toString() {
+    public function setInterval($interval) {
+        $this->interval = (int) $interval;
+
+        return $this;
+    }
+
+    /**
+     * @see PHP\BitTorrent\Tracker\Response\ResponseInterface::setNoPeerId()
+     */
+    public function setNoPeerId($flag) {
+        $this->noPeerId = (bool) $flag;
+
+        return $this;
+    }
+
+    /**
+     * @see PHP\BitTorrent\Tracker\Response\ResponseInterface::setCompact()
+     */
+    public function setCompact($flag) {
+        $this->compact = (bool) $flag;
+
+        return $this;
+    }
+
+    /**
+     * @see PHP\BitTorrent\Tracker\Response\ResponseInterface::asEncodedStrig()
+     */
+    public function asEncodedString(Encoder $encoder) {
         // Initialize (in)complete variables
         $complete = 0;
         $incomplete = 0;
@@ -215,13 +166,13 @@ class PHP_BitTorrent_Tracker_Response {
         }
 
         $response = array(
-            'interval'   => $this->getInterval(),
+            'interval'   => $this->interval,
             'complete'   => $complete,
             'incomplete' => $incomplete,
             'peers'      => $peers,
         );
 
         // Return the encoded the response
-        return PHP_BitTorrent_Encoder::encodeDictionary($response);
+        return $encoder->encodeDictionary($response);
     }
 }

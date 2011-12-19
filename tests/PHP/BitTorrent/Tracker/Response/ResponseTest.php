@@ -1,6 +1,6 @@
 <?php
 /**
- * PHP_BitTorrent
+ * PHP BitTorrent
  *
  * Copyright (c) 2011 Christer Edvartsen <cogo@starzinger.net>
  *
@@ -22,119 +22,132 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  *
- * @package PHP_BitTorrent
- * @subpackage UnitTests
+ * @package UnitTests
  * @author Christer Edvartsen <cogo@starzinger.net>
  * @copyright Copyright (c) 2011, Christer Edvartsen
  * @license http://www.opensource.org/licenses/mit-license MIT License
  */
 
+namespace PHP\BitTorrent\Tracker\Response;
+
+use PHP\BitTorrent\Encoder,
+    PHP\BitTorrent\Decoder;
+
 /**
- * @package PHP_BitTorrent
- * @subpackage UnitTests
+ * @package UnitTests
  * @author Christer Edvartsen <cogo@starzinger.net>
  * @copyright Copyright (c) 2011, Christer Edvartsen
  * @license http://www.opensource.org/licenses/mit-license MIT License
  */
-class PHP_BitTorrent_Tracker_ResponseTest extends PHPUnit_Framework_TestCase {
+class ResponseTest extends \PHPUnit_Framework_TestCase {
     /**
      * Response object
      *
-     * @var PHP_BitTorrent_Tracker_Response
+     * @var PHP\BitTorrent\Tracker\Response\Response
      */
-    protected $response = null;
+    private $response;
 
     public function setUp() {
-        $this->response = new PHP_BitTorrent_Tracker_Response();
+        $this->response = new Response();
     }
 
     public function tearDown() {
-        $this->response= null;
+        $this->response = null;
     }
 
-    public function testDefaultValues() {
-        $this->assertSame(3600, $this->response->getInterval());
-        $this->assertSame(array(), $this->response->getPeers());
-    }
-
-    public function testSetGetInterval() {
-        $interval = 60;
-
-        $this->response->setInterval($interval);
-        $this->assertSame($interval, $this->response->getInterval());
-    }
-
-    public function testAddAndGetSinglePeer() {
-        $peer = new PHP_BitTorrent_Tracker_Peer();
-
-        $this->response->addPeer($peer);
-        $peers = $this->response->getPeers();
-
-        $this->assertSame(1, count($peers));
-        $this->assertSame($peer, $peers[0]);
-    }
-
-    public function testAddAndGetSeveralPeers() {
+    public function testAddPeers() {
         $peers = array(
-            new PHP_BitTorrent_Tracker_Peer(),
-            new PHP_BitTorrent_Tracker_Peer(),
-            new PHP_BitTorrent_Tracker_Peer(),
+            $this->getMock('PHP\BitTorrent\Tracker\Peer\PeerInterface'),
+            $this->getMock('PHP\BitTorrent\Tracker\Peer\PeerInterface'),
+            $this->getMock('PHP\BitTorrent\Tracker\Peer\PeerInterface'),
         );
-
-        $this->response->addPeers($peers);
-        $this->assertSame($peers, $this->response->getPeers());
+        $this->assertSame($this->response, $this->response->addPeers($peers));
     }
 
-    public function testSetGetNoPeerId() {
-        $this->response->setNoPeerId(true);
-        $this->assertTrue($this->response->getNoPeerId());
-        $this->response->setNoPeerId(false);
-        $this->assertFalse($this->response->getNoPeerId());
+    public function testAddPeer() {
+        $peer = $this->getMock('PHP\BitTorrent\Tracker\Peer\PeerInterface');
+
+        $this->assertSame($this->response, $this->response->addPeer($peer));
     }
 
-    public function testSetGetCompact() {
+    public function testSetInterval() {
+        $this->assertSame($this->response, $this->response->setInterval(123));
+    }
+
+    public function testSetNoPeerId() {
+        $this->assertSame($this->response, $this->response->setNoPeerId(false));
+    }
+
+    public function testSetCompact() {
+        $this->assertSame($this->response, $this->response->setCompact(true));
+    }
+
+    public function testAsEncodedString() {
+        $encoder = new Encoder();
+
+        $peer = $this->getMock('PHP\BitTorrent\Tracker\Peer\PeerInterface');
+        $peer->expects($this->once())->method('getIp')->will($this->returnValue('127.0.0.1'));
+        $peer->expects($this->once())->method('getPort')->will($this->returnValue(123));
+        $peer->expects($this->once())->method('getId')->will($this->returnValue('id#1'));
+
+        $seed = $this->getMock('PHP\BitTorrent\Tracker\Peer\PeerInterface');
+        $seed->expects($this->once())->method('getIp')->will($this->returnValue('127.0.0.1'));
+        $seed->expects($this->once())->method('getPort')->will($this->returnValue(1234));
+        $seed->expects($this->once())->method('isSeed')->will($this->returnValue(true));
+        $seed->expects($this->once())->method('getId')->will($this->returnValue('id#2'));
+
+        $this->response->addPeers(array($peer, $seed));
+
+        $string = $this->response->asEncodedString($encoder);
+        $decoder = new Decoder($encoder);
+        $decoded = $decoder->decodeDictionary($string);
+
+        $this->assertArrayHasKey('interval', $decoded);
+        $this->assertArrayHasKey('complete', $decoded);
+        $this->assertArrayHasKey('incomplete', $decoded);
+        $this->assertArrayHasKey('peers', $decoded);
+        $this->assertInternalType('array', $decoded['peers']);
+        $this->assertSame(2, count($decoded['peers']));
+
+        $this->assertArrayHasKey('ip', $decoded['peers'][0]);
+        $this->assertArrayHasKey('port', $decoded['peers'][0]);
+        $this->assertArrayHasKey('peer id', $decoded['peers'][0]);
+
+        $this->assertArrayHasKey('ip', $decoded['peers'][1]);
+        $this->assertArrayHasKey('port', $decoded['peers'][1]);
+        $this->assertArrayHasKey('peer id', $decoded['peers'][1]);
+
+        $this->assertSame(1, $decoded['complete']);
+        $this->assertSame(1, $decoded['incomplete']);
+    }
+
+    public function testAsEncodedStringWithCompactResponse() {
+        $encoder = new Encoder();
+
         $this->response->setCompact(true);
-        $this->assertTrue($this->response->getCompact());
-        $this->response->setCompact(false);
-        $this->assertFalse($this->response->getCompact());
-    }
 
-    public function testMagicToStringMethod() {
-        // Add a peer
-        $leech = new PHP_BitTorrent_Tracker_Peer();
-        $leech->setId('id#1')->setIp('127.0.0.1')->setPort(123)->setLeft(123);
+        $peer = $this->getMock('PHP\BitTorrent\Tracker\Peer\PeerInterface');
+        $peer->expects($this->once())->method('getIp')->will($this->returnValue('127.0.0.1'));
+        $peer->expects($this->once())->method('getPort')->will($this->returnValue(123));
 
-        $seed = new PHP_BitTorrent_Tracker_Peer();
-        $seed->setId('id#2')->setIp('127.0.0.2')->setPort(1234)->setLeft(0);
+        $seed = $this->getMock('PHP\BitTorrent\Tracker\Peer\PeerInterface');
+        $seed->expects($this->once())->method('getIp')->will($this->returnValue('127.0.0.1'));
+        $seed->expects($this->once())->method('getPort')->will($this->returnValue(1234));
+        $seed->expects($this->once())->method('isSeed')->will($this->returnValue(true));
 
-        $this->response->addPeer($leech)->addPeer($seed);
-        $response = (string) $this->response;
+        $this->response->addPeers(array($peer, $seed));
 
-        // Decode the response
-        $responseDecoded = PHP_BitTorrent_Decoder::decode($response);
+        $string = $this->response->asEncodedString($encoder);
+        $decoder = new Decoder($encoder);
+        $decoded = $decoder->decodeDictionary($string);
 
-        $this->assertSame(1, $responseDecoded['complete']);
-        $this->assertSame(1, $responseDecoded['incomplete']);
-        $this->assertSame(2, count($responseDecoded['peers']));
-    }
+        $this->assertArrayHasKey('interval', $decoded);
+        $this->assertArrayHasKey('complete', $decoded);
+        $this->assertArrayHasKey('incomplete', $decoded);
+        $this->assertArrayHasKey('peers', $decoded);
+        $this->assertInternalType('string', $decoded['peers']);
 
-    public function testMagicToStringMethodWhenCompactModeIsEnabled() {
-        $this->response->setCompact(true);
-
-        // Add a peer
-        $leech = new PHP_BitTorrent_Tracker_Peer();
-        $leech->setId('id#1')->setIp('127.0.0.1')->setPort(123)->setLeft(123);
-
-        $seed = new PHP_BitTorrent_Tracker_Peer();
-        $seed->setId('id#2')->setIp('127.0.0.2')->setPort(1234)->setLeft(0);
-
-        $this->response->addPeer($leech)->addPeer($seed);
-        $response = (string) $this->response;
-
-        // Decode the response
-        $responseDecoded = PHP_BitTorrent_Decoder::decode($response);
-        $this->assertSame(1, $responseDecoded['complete']);
-        $this->assertSame(1, $responseDecoded['incomplete']);
-        $this->assertInternalType('string', $responseDecoded['peers']);
+        $this->assertSame(1, $decoded['complete']);
+        $this->assertSame(1, $decoded['incomplete']);
     }
 }
