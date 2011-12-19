@@ -1,6 +1,6 @@
 <?php
 /**
- * PHP_BitTorrent
+ * PHP BitTorrent
  *
  * Copyright (c) 2011 Christer Edvartsen <cogo@starzinger.net>
  *
@@ -22,31 +22,43 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  *
- * @package PHP_BitTorrent
+ * @package Tracker
+ * @subpackage Exceptions
  * @author Christer Edvartsen <cogo@starzinger.net>
  * @copyright Copyright (c) 2011, Christer Edvartsen
  * @license http://www.opensource.org/licenses/mit-license MIT License
  */
 
+namespace PHP\BitTorrent\Tracker;
+
+use PHP\BitTorrent\Encoder,
+    RuntimeException;
+
 /**
  * Exception class for the tracker
  *
- * @package PHP_BitTorrent
+ * @package Tracker
+ * @subpackage Exceptions
  * @author Christer Edvartsen <cogo@starzinger.net>
  * @copyright Copyright (c) 2011, Christer Edvartsen
  * @license http://www.opensource.org/licenses/mit-license MIT License
  */
-class PHP_BitTorrent_Tracker_Exception extends PHP_BitTorrent_Exception {
+class Exception extends RuntimeException {
     /**
-     * Encode the error message to it can be sent to a BitTorrent client
+     * Encode the error message so it can be sent to a BitTorrent client
      *
-     * This function will send a bencoded message to a bittorrent client telling it that an error
+     * This function will send a bencoded message to a BitTorrent client telling it that an error
      * has occured. When the client receives a dictionary with the key "failure reason" it knows
      * something is wrong.
      *
+     * @param PHP\BitTorrent\Encoder $encoder The encoder to use to encode the error message
      * @return string
      */
-    public function getMessageEncoded() {
-        return PHP_BitTorrent_Encoder::encodeDictionary(array('failure reason' => $this->getMessage()));
+    public function getMessageEncoded(Encoder $encoder = null) {
+        if ($encoder === null) {
+            $encoder = new Encoder();
+        }
+
+        return $encoder->encodeDictionary(array('failure reason' => $this->getMessage()));
     }
 }

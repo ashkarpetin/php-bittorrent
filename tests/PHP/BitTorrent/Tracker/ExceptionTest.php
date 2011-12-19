@@ -1,6 +1,6 @@
 <?php
 /**
- * PHP_BitTorrent
+ * PHP BitTorrent
  *
  * Copyright (c) 2011 Christer Edvartsen <cogo@starzinger.net>
  *
@@ -22,21 +22,21 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  *
- * @package PHP_BitTorrent
- * @subpackage UnitTests
+ * @package UnitTests
  * @author Christer Edvartsen <cogo@starzinger.net>
  * @copyright Copyright (c) 2011, Christer Edvartsen
  * @license http://www.opensource.org/licenses/mit-license MIT License
  */
 
+namespace PHP\BitTorrent\Tracker;
+
 /**
- * @package PHP_BitTorrent
- * @subpackage UnitTests
+ * @package UnitTests
  * @author Christer Edvartsen <cogo@starzinger.net>
  * @copyright Copyright (c) 2011, Christer Edvartsen
  * @license http://www.opensource.org/licenses/mit-license MIT License
  */
-class PHP_BitTorrent_Tracker_ExceptionTest extends PHPUnit_Framework_TestCase {
+class ExceptionTest extends \PHPUnit_Framework_TestCase {
     public function testGetMessageEncoded() {
         // Failure message
         $message = 'This is just a test.';
@@ -44,11 +44,11 @@ class PHP_BitTorrent_Tracker_ExceptionTest extends PHPUnit_Framework_TestCase {
         // Failure array
         $failure = array('failure reason' => $message);
 
-        // Encode array
-        $failureEncoded = PHP_BitTorrent_Encoder::encodeDictionary($failure);
+        $encoder = $this->getMock('PHP\BitTorrent\Encoder');
+        $encoder->expects($this->once())->method('encodeDictionary')->with($failure);
 
         // Create a new exception
-        $exception = new PHP_BitTorrent_Tracker_Exception($message);
-        $this->assertSame($failureEncoded, $exception->getMessageEncoded());
+        $exception = new Exception($message);
+        $encoded = $exception->getMessageEncoded($encoder);
     }
 }
