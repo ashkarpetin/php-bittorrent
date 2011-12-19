@@ -161,7 +161,7 @@ class Sqlite implements BackendInterface {
     /**
      * @see PHP\BitTorrent\Tracker\Backend\BackendInterface::torrentPeerExists()
      */
-    public function torrentPeerExists($infoHash, Peer $peer) {
+    public function torrentPeerExists($infoHash, PeerInterface $peer) {
         $sql = "
             SELECT
                 p.ip
@@ -185,7 +185,7 @@ class Sqlite implements BackendInterface {
     /**
      * @see PHP\BitTorrent\Tracker\Backend\BackendInterface::getTorrentPeers()
      */
-    public function getTorrentPeers($infoHash, $limit = null, PeerInterface $exclude = null);
+    public function getTorrentPeers($infoHash, $limit = null, PeerInterface $exclude = null) {
         $where = array();
         $where[] = "t.infoHash = :infoHash";
 
