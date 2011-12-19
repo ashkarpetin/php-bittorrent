@@ -1,6 +1,6 @@
 <?php
 /**
- * PHP_BitTorrent
+ * PHP BitTorrent
  *
  * Copyright (c) 2011 Christer Edvartsen <cogo@starzinger.net>
  *
@@ -22,34 +22,29 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  *
- * @package PHP_BitTorrent
+ * @package Request
+ * @subpackage Tracker
  * @author Christer Edvartsen <cogo@starzinger.net>
  * @copyright Copyright (c) 2011, Christer Edvartsen
  * @license http://www.opensource.org/licenses/mit-license MIT License
  */
+
+namespace PHP\BitTorrent\Tracker\Request;
+
+use InvalidArgumentException;
 
 /**
- * Class representing a request made by the tracker
+ * Class representing a request from a BitTorrent client
  *
- * @package PHP_BitTorrent
+ * @package Request
+ * @subpackage Tracker
  * @author Christer Edvartsen <cogo@starzinger.net>
  * @copyright Copyright (c) 2011, Christer Edvartsen
  * @license http://www.opensource.org/licenses/mit-license MIT License
  */
-class PHP_BitTorrent_Tracker_Request {
+class Request implements RequestInterface {
     /**#@+
-     * Event sent from the client
-     *
-     * @var string
-     */
-    const EVENT_STARTED   = 'started';
-    const EVENT_COMPLETED = 'completed';
-    const EVENT_STOPPED   = 'stopped';
-    const EVENT_NONE      = '';
-    /**#@-*/
-
-    /**#@+
-      * Request names that matched the names used in a typical GET request
+      * Request names that matches the names used in a typical GET request
       *
       * @var string
       */
@@ -66,317 +61,200 @@ class PHP_BitTorrent_Tracker_Request {
      /**#@-*/
 
     /**
-     * The data from the request
+     * GET data
      *
      * @var array
      */
-    protected $data = array();
+    private $query;
 
     /**
-     * The required parameters
+     * Server data
      *
      * @var array
      */
-    protected $requiredParams = array(
-        self::IP,
-        self::INFO_HASH,
-        self::PEER_ID,
-        self::PORT,
-        self::UPLOADED,
-        self::DOWNLOADED,
-        self::LEFT,
+    private $server;
+
+    /**
+     * Required query parameters
+     *
+     * @var array
+     */
+    static protected $requiredQueryParams = array(
+        'info_hash',
+        'peer_id',
+        'port',
+        'uploaded',
+        'downloaded',
+        'left',
+        'event',
     );
 
     /**
      * Class constructor
      *
-     * @param array $data
+     * @param array $query Data from $_GET
+     * @param array $server Data from $_SERVER
      */
-    public function __construct($data = null) {
-        if ($data !== null) {
-            foreach ($data as $key => $value) {
-                $this->$key = $value;
-            }
-        }
+    public function __construct(array $query = array(), array $server = array()) {
+        $this->query = $query;
+        $this->server = $server;
 
-        $this->setIp();
+        $this->validate();
     }
 
     /**
-     * Overloading for accessing class property values
-     *
-     * @param string $key
-     * @return mixed
-     */
-    public function __get($key) {
-        if (isset($this->data[$key])) {
-            return $this->data[$key];
-        }
-
-        return null;
-    }
-
-    /**
-     * Overloading for setting class property values
-     *
-     * @param string $key
-     * @param mixed $value
-     * @return PHP_BitTorrent_Tracker_Request
-     */
-    public function __set($key, $value) {
-        switch ($key) {
-            case self::EVENT:
-                $this->setEvent($value);
-                break;
-            case self::PORT:
-                $this->setPort($value);
-                break;
-            case self::PEER_ID:
-                $this->setPeerId($value);
-                break;
-            case self::DOWNLOADED:
-                $this->setDownloaded($value);
-                break;
-            case self::UPLOADED:
-                $this->setUploaded($value);
-                break;
-            case self::LEFT:
-                $this->setLeft($value);
-                break;
-            case self::INFO_HASH:
-                $this->setInfoHash($value);
-                break;
-            case self::USER_AGENT:
-                $this->setUserAgent($value);
-                break;
-            case self::IP:
-                $this->setClientIp($value);
-                break;
-            default:
-            	$this->data[$key] = $value;
-            	break;
-        }
-
-        return $this;
-    }
-
-    /**
-     * Overloading to determine if a property is set
-     *
-     * @param string $key
-     * @return boolean
-     */
-    public function __isset($key) {
-        return !empty($this->data[$key]);
-    }
-
-    /**
-     * See if a request is valid
-     *
-     * @throws PHP_BitTorrent_Tracker_Request_Exception
-     * @return boolean Returns true if the request is valid
+     * @see PHP\BitTorrent\Tracker\Request\RequestInterface::validate()
      */
     public function validate() {
-        foreach ($this->requiredParams as $key) {
-            if (!isset($this->data[$key])) {
-                throw new PHP_BitTorrent_Tracker_Request_Exception('Missing parameter "' . $key . '"');
+        foreach (static::$requiredQueryParams as $key) {
+            if (!isset($this->query[$key])) {
+                throw new InvalidArgumentException('Missing query parameter: ' . $key);
             }
         }
 
-        return true;
+        $this->validateEvent($this->getEvent());
+        $this->validatePort($this->getPort());
+        $this->validateInfoHash($this->getInfoHash());
+        $this->validatePeerId($this->getPeerId());
     }
 
     /**
-     * Set the ip address or host address of the client
+     * Validate the event from the client
      *
-     * @param string $ip IP address or hostname
-     * @return PHP_BitTorrent_Tracker_Request
+     * @param string $event The event from the client
+     * @throws InvalidArgumentException
      */
-    public function setClientIp($ip) {
-        $this->data[self::IP] = $ip;
-
-        return $this;
-    }
-
-    /**
-     * The ip part is optional and if the client does not send it, we will fetch it using the
-     * getClientIp method.
-     */
-    protected function setIp() {
-        if (!$this->__isset(self::IP)) {
-            $this->__set(self::IP, $this->getClientIp());
+    private function validateEvent($event) {
+        // Make sure the event is valid
+        switch ($event) {
+            case RequestInterface::EVENT_NONE:
+            case RequestInterface::EVENT_STARTED:
+            case RequestInterface::EVENT_STOPPED:
+            case RequestInterface::EVENT_COMPLETED:
+                break;
+            default:
+                throw new InvalidArgumentException('Invalid event: ' . $event);
         }
     }
 
     /**
-     * Get the ip address of the client
+     * Validate the port from the client
      *
-     * @return string
+     * @param int $port The port from the client
+     * @throws InvalidArgumentException
      */
-    protected function getClientIp() {
-        if (isset($_SERVER['HTTP_X_FORWARDED_FOR'])) {
-            return $_SERVER['HTTP_X_FORWARDED_FOR'];
-        } else if (isset($_SERVER['REMOTE_ADDR'])) {
-            return $_SERVER['REMOTE_ADDR'];
+    private function validatePort($port) {
+        if (!$port || $port > 65535) {
+            throw new InvalidArgumentException('Invalid port: ' . $port);
+        }
+    }
+
+    /**
+     * Validate the info hash
+     *
+     * @param string $infoHash The info hash from the client
+     * @throws InvalidArgumentException
+     */
+    private function validateInfoHash($infoHash) {
+        if (strlen($infoHash) !== 20) {
+            throw new InvalidArgumentException('Invalid info hash: ' . $infoHash);
+        }
+    }
+
+    /**
+     * Validate the peer id
+     *
+     * @param string $peerId The peer id from the client
+     * @throws InvalidArgumentException
+     */
+    private function validatePeerId($peerId) {
+        if (strlen($peerId) !== 20) {
+            throw new InvalidArgumentException('Invalid peer id: ' . $peerId);
+        }
+    }
+
+    /**
+     * @see PHP\BitTorrent\Tracker\Request\RequestInterface::getInfoHash()
+     */
+    public function getInfoHash() {
+        return stripslashes($this->query['info_hash']);
+    }
+
+    /**
+     * @see PHP\BitTorrent\Tracker\Request\RequestInterface::getInfoHashHex()
+     */
+    public function getInfoHashHex() {
+        return bin2hex($this->getInfoHash());
+    }
+
+    /**
+     * @see PHP\BitTorrent\Tracker\Request\RequestInterface::getPeerId()
+     */
+    public function getPeerId() {
+        return stripslashes($this->query['peer_id']);
+    }
+
+    /**
+     * @see PHP\BitTorrent\Tracker\Request\RequestInterface::getIp()
+     */
+    public function getIp() {
+        if (isset($this->query['ip'])) {
+            return $this->query['ip'];
+        } else if (isset($this->server['HTTP_X_FORWARDED_FOR'])) {
+            return $this->server['HTTP_X_FORWARDED_FOR'];
+        } else if (isset($this->server['REMOTE_ADDR'])) {
+            return $this->server['REMOTE_ADDR'];
         }
 
         return null;
     }
 
     /**
-     * Set the info hash of the request
-     *
-     * This method checks the length of the info hash string. If it validates it will create a
-     * hexadecimal version of it and store it in the data array.
-     *
-     * @param string $infoHash
-     * @throws PHP_BitTorrent_Tracker_Request_Exception
-     * @return PHP_BitTorrent_Tracker_Request
+     * @see PHP\BitTorrent\Tracker\Request\RequestInterface::getPort()
      */
-    public function setInfoHash($infoHash) {
-        $infoHash = $this->escape($infoHash);
-
-        if (strlen($infoHash) !== 20) {
-            throw new PHP_BitTorrent_Tracker_Request_Exception('Invalid info hash: ' . $infoHash);
-        }
-
-        $this->data[self::INFO_HASH] = $infoHash;
-        $this->data[self::INFO_HASH_HEX] = bin2hex($infoHash);
-
-        return $this;
+    public function getPort() {
+        return (int) $this->query['port'];
     }
 
     /**
-     * Set the user agent string
-     *
-     * @param string $userAgent
-     * @return PHP_BitTorrent_Tracker_Request
+     * @see PHP\BitTorrent\Tracker\Request\RequestInterface::getDownloaded()
      */
-    public function setUserAgent($userAgent) {
-        $this->data[self::USER_AGENT] = $userAgent;
-
-        return $this;
+    public function getDownloaded() {
+        return (int) $this->query['downloaded'];
     }
 
     /**
-     * Set the peer id set by the client
-     *
-     * The peer_id is a 20 byte random string generated by the client.
-     *
-     * @param string $peerId
-     * @throws PHP_BitTorrent_Tracker_Request_Exception
-     * @return PHP_BitTorrent_Tracker_Request
+     * @see PHP\BitTorrent\Tracker\Request\RequestInterface::getUploaded()
      */
-    public function setPeerId($peerId) {
-        $peerId = $this->escape($peerId);
-
-        if (strlen($peerId) !== 20) {
-            throw new PHP_BitTorrent_Tracker_Request_Exception('Invalid peer id: ' . $peerId);
-        }
-
-        $this->data[self::PEER_ID] = $peerId;
-
-        return $this;
+    public function getUploaded() {
+        return (int) $this->query['uploaded'];
     }
 
     /**
-     * Set the event
-     *
-     * @param string $event
-     * @throws PHP_BitTorrent_Tracker_Request_Exception
-     * @return PHP_BitTorrent_Tracker_Request
+     * @see PHP\BitTorrent\Tracker\Request\RequestInterface::getLeft()
      */
-    public function setEvent($event) {
-        switch ($event) {
-            case self::EVENT_NONE:
-            case self::EVENT_STARTED:
-            case self::EVENT_STOPPED:
-            case self::EVENT_COMPLETED:
-                $this->data[self::EVENT] = $event;
-                break;
-            default:
-                throw new PHP_BitTorrent_Tracker_Request_Exception('Invalid event: ' . $event);
-        }
-
-        return $this;
+    public function getLeft() {
+        return (int) $this->query['left'];
     }
 
     /**
-     * Set the port
-     *
-     * @param int $port
-     * @throws PHP_BitTorrent_Tracker_Request_Exception
-     * @return PHP_BitTorrent_Tracker_Request
+     * @see PHP\BitTorrent\Tracker\Request\RequestInterface::getEvent()
      */
-    public function setPort($port) {
-        $port = (int) $port;
-
-        if (!$port || $port > 65535) {
-            throw new PHP_BitTorrent_Tracker_Request_Exception('Invalid port: ' . $port);
-        }
-
-        $this->data[self::PORT] = $port;
-
-        return $this;
+    public function getEvent() {
+        return $this->query['event'];
     }
 
     /**
-     * Set the "downloaded" param
-     *
-     * @param int $downloaded
-     * @return PHP_BitTorrent_Tracker_Request
+     * @see PHP\BitTorrent\Tracker\Request\RequestInterface::getNoPeerId()
      */
-    public function setDownloaded($downloaded) {
-        $this->data[self::DOWNLOADED] = (int) $downloaded;
-
-        return $this;
+    public function getNoPeerId() {
+        return !empty($this->query['nopeer_id']) ? true : false;
     }
 
     /**
-     * Set the "uploaded" param
-     *
-     * @param int $uploaded
-     * @return PHP_BitTorrent_Tracker_Request
+     * @see PHP\BitTorrent\Tracker\Request\RequestInterface::getCompact()
      */
-    public function setUploaded($uploaded) {
-        $this->data[self::UPLOADED] = (int) $uploaded;
-
-        return $this;
-    }
-
-    /**
-     * Set the "left" param
-     *
-     * @param int $left
-     * @return PHP_BitTorrent_Tracker_Request
-     */
-    public function setLeft($left) {
-        $this->data[self::LEFT] = (int) $left;
-
-        return $this;
-    }
-
-    /**
-     * See if the request is from a seeder ("left" must be 0)
-     *
-     * @return boolean
-     * @throws PHP_BitTorrent_Tracker_Request_Exception
-     */
-    public function isSeeder() {
-        if (!isset($this->data[self::LEFT])) {
-            throw new PHP_BitTorrent_Tracker_Request_Exception('Invalid request');
-        }
-
-        return !$this->data[self::LEFT];
-    }
-
-    /**
-     * Escape data from the request
-     *
-     * @param string $data
-     * @return string
-     */
-    protected function escape($data) {
-        return stripslashes($data);
+    public function getCompact() {
+        return !empty($this->query['compact']) ? true : false;
     }
 }

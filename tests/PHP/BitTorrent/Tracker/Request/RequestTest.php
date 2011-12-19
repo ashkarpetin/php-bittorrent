@@ -1,6 +1,6 @@
 <?php
 /**
- * PHP_BitTorrent
+ * PHP BitTorrent
  *
  * Copyright (c) 2011 Christer Edvartsen <cogo@starzinger.net>
  *
@@ -22,192 +22,117 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  *
- * @package PHP_BitTorrent
- * @subpackage UnitTests
+ * @package UnitTests
  * @author Christer Edvartsen <cogo@starzinger.net>
  * @copyright Copyright (c) 2011, Christer Edvartsen
  * @license http://www.opensource.org/licenses/mit-license MIT License
  */
+
+namespace PHP\BitTorrent\Tracker\Request;
 
 /**
- * @package PHP_BitTorrent
- * @subpackage UnitTests
+ * @package UnitTests
  * @author Christer Edvartsen <cogo@starzinger.net>
  * @copyright Copyright (c) 2011, Christer Edvartsen
  * @license http://www.opensource.org/licenses/mit-license MIT License
  */
-class PHP_BitTorrent_Tracker_RequestTest extends PHPUnit_Framework_TestCase {
+class RequestTest extends \PHPUnit_Framework_TestCase {
+    private $query = array(
+        'info_hash' => 'aaaaaaaaaaaaaaaaaaaa',
+        'peer_id' => 'bbbbbbbbbbbbbbbbbbbb',
+        'port' => 123,
+        'uploaded' => 123,
+        'downloaded' => 234,
+        'left' => 345,
+        'event' => RequestInterface::EVENT_NONE,
+    );
+
+    public function testAccessors() {
+        $request = new Request($this->query);
+
+        $this->assertSame($this->query['info_hash'], $request->getInfoHash());
+        $this->assertSame('6161616161616161616161616161616161616161', $request->getInfoHashHex());
+        $this->assertSame($this->query['peer_id'], $request->getPeerId());
+        $this->assertSame($this->query['downloaded'], $request->getDownloaded());
+        $this->assertSame($this->query['uploaded'], $request->getUploaded());
+        $this->assertSame($this->query['left'], $request->getLeft());
+        $this->assertSame($this->query['event'], $request->getEvent());
+        $this->assertSame($this->query['port'], $request->getPort());
+        $this->assertFalse($request->getNoPeerId());
+        $this->assertFalse($request->getCompact());
+    }
+
     /**
-     * Request object
-     *
-     * @var PHP_BitTorrent_Tracker_Request
+     * @expectedException InvalidArgumentException
+     * @expectedExceptionMessage Missing query parameter
      */
-    protected $request = null;
-
-    public function setUp() {
-        $this->request = new PHP_BitTorrent_Tracker_Request();
+    public function testRequestWithMissingParameter() {
+        $request = new Request();
     }
 
-    public function tearDown() {
-        $this->request = null;
+    /**
+     * @expectedException InvalidArgumentException
+     * @expectedExceptionMessage Invalid event: some event
+     */
+    public function testRequestWithInvalidEvent() {
+        $query = $this->query;
+        $query['event'] = 'some event';
+        $request = new Request($query);
     }
 
-    public function testSetGetInfoHash() {
-        $infoHash = str_pad('20 byte info hash', 20);
-        $this->request->info_hash = $infoHash;
-        $this->assertSame($infoHash, $this->request->info_hash);
+    /**
+     * @expectedException InvalidArgumentException
+     * @expectedExceptionMessage Invalid port: 10000
+     */
+    public function testRequestWithInvalidPort() {
+        $query = $this->query;
+        $query['port'] = 100000;
+        $request = new Request($query);
     }
 
-    public function testSetGetPeerId() {
-        $peerId = str_pad('20 byte string', 20);
-        $this->request->peer_id = $peerId;
-        $this->assertSame($peerId, $this->request->peer_id);
+    /**
+     * @expectedException InvalidArgumentException
+     * @expectedExceptionMessage Invalid info hash: value
+     */
+    public function testRequestWithInvalidInfoHash() {
+        $query = $this->query;
+        $query['info_hash'] = 'value';
+        $request = new Request($query);
     }
 
-    public function testSetGetPort() {
-        $port = 80;
-        $this->request->port = $port;
-        $this->assertSame($port, $this->request->port);
+    /**
+     * @expectedException InvalidArgumentException
+     * @expectedExceptionMessage Invalid peer id: value
+     */
+    public function testRequestWithInvalidPeerId() {
+        $query = $this->query;
+        $query['peer_id'] = 'value';
+        $request = new Request($query);
     }
 
-    public function testSetGetDownloaded() {
-        $downloaded = 100;
-        $this->request->downloaded = $downloaded;
-        $this->assertSame($downloaded, $this->request->downloaded);
+    public function testGetIpWithIpInQuery() {
+        $query = $this->query;
+        $query['ip'] = '127.0.0.1';
+        $request = new Request($query);
+        $this->assertSame($query['ip'], $request->getIp());
     }
 
-    public function testSetGetUploaded() {
-        $uploaded = 100;
-        $this->request->uploaded = $uploaded;
-        $this->assertSame($uploaded, $this->request->uploaded);
-    }
-
-    public function testSetGetLeft() {
-        $left = 100;
-        $this->request->left = $left;
-        $this->assertSame($left, $this->request->left);
-    }
-
-    public function testSetGetIp() {
-        $ip = '127.0.0.1';
-        $this->request->ip = $ip;
-        $this->assertSame($ip, $this->request->ip);
-    }
-
-    public function testSetGetUserAgent() {
-        $ua = 'UserAgentString';
-        $this->request->user_agent = $ua;
-        $this->assertSame($ua, $this->request->user_agent);
-    }
-
-    public function testSetGetEvent() {
-        $event = PHP_BitTorrent_Tracker_Request::EVENT_COMPLETED;
-        $this->request->event = $event;
-        $this->assertSame($event, $this->request->event);
-    }
-
-    public function testIsSeederOrNot() {
-        $this->request->left = 0;
-        $this->assertTrue($this->request->isSeeder());
-
-        $this->request->left = 1;
-        $this->assertFalse($this->request->isSeeder());
-    }
-
-    public function testSetGetNonDefaultValue() {
-        $key = 'foo';
-        $value = 'bar';
-
-        $this->request->$key = $value;
-        $this->assertSame($value, $this->request->$key);
-    }
-
-    public function testGetNonExistingKey() {
-        $this->assertNull($this->request->foobar);
-    }
-
-    public function testSetInvalidInfoHash() {
-        $infoHash = 'asd';
-        $this->setExpectedException('PHP_BitTorrent_Tracker_Request_Exception');
-        $this->request->info_hash = $infoHash;
-
-    }
-
-    public function testSetInvalidPeerId() {
-        $peerId = 'asd';
-        $this->setExpectedException('PHP_BitTorrent_Tracker_Request_Exception');
-        $this->request->peer_id = $peerId;
-
-    }
-
-    public function testSetInvalidEvent() {
-        $this->setExpectedException('PHP_BitTorrent_Tracker_Request_Exception');
-        $this->request->event = 'foobar';
-    }
-
-    public function testSetInvalidPort() {
-        $this->setExpectedException('PHP_BitTorrent_Tracker_Request_Exception');
-        $this->request->port = 0;
-    }
-
-    public function testIsSeederWithMissingData() {
-        $this->setExpectedException('PHP_BitTorrent_Tracker_Request_Exception');
-        $this->request->isSeeder();
-    }
-
-    public function testGetClientIpWithHttpXForwardedForPresent() {
-        $_SERVER['HTTP_X_FORWARDED_FOR'] = '1.1.1.1';
-        $request = new PHP_BitTorrent_Tracker_Request();
-        $this->assertSame($_SERVER['HTTP_X_FORWARDED_FOR'], $request->ip);
-        unset($_SERVER['HTTP_X_FORWARDED_FOR']);
-    }
-
-    public function testGetClientIpWithRemoteAddrPresent() {
-        $_SERVER['REMOTE_ADDR'] = '2.2.2.2';
-        $request = new PHP_BitTorrent_Tracker_Request();
-        $this->assertSame($_SERVER['REMOTE_ADDR'], $request->ip);
-        unset($_SERVER['REMOTE_ADDR']);
-    }
-
-    public function testValidateOnValidRequest() {
-    	$params = array(
-            'info_hash'  => str_pad('20 byte info hash', 20),
-            'peer_id'    => str_pad('20 byte peer id', 20),
-            'ip'         => '1.2.3.4',
-            'port'       => '8080',
-            'uploaded'   => '123',
-            'downloaded' => '321',
-            'left'       => '22',
-    	);
-
-    	foreach ($params as $key => $val) {
-            $this->request->$key = $val;
-    	}
-
-        $this->assertTrue($this->request->validate());
-    }
-
-    public function testValidateOnInvalidRequest() {
-        $params = array(
-            'info_hash'  => str_pad('20 byte info hash', 20),
-            'peer_id'    => str_pad('20 byte peer id', 20),
+    public function testGetIpWithIpServer() {
+        $server = array(
+            'HTTP_X_FORWARDED_FOR' => '127.0.0.1',
+            'REMOTE_ADDR' => '127.0.0.2',
         );
+        $request = new Request($this->query, $server);
+        $this->assertSame($server['HTTP_X_FORWARDED_FOR'], $request->getIp());
 
-        foreach ($params as $key => $val) {
-            $this->request->$key = $val;
-        }
+        unset($server['HTTP_X_FORWARDED_FOR']);
 
-        $this->setExpectedException('PHP_BitTorrent_Tracker_Request_Exception');
-        $this->request->validate();
+        $request = new Request($this->query, $server);
+        $this->assertSame($server['REMOTE_ADDR'], $request->getIp());
     }
 
-    public function testSetDataUsingConstructor() {
-        $data = array(
-            'foo' => 'bar',
-            'bar' => 'foo',
-        );
-        $request = new PHP_BitTorrent_Tracker_Request($data);
-        $this->assertSame($data['foo'], $request->foo);
-        $this->assertSame($data['bar'], $request->bar);
+    public function testGetIpWithNonePresent() {
+        $request = new Request($this->query);
+        $this->assertNull($request->getIp());
     }
 }
