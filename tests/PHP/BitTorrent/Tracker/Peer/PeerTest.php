@@ -28,7 +28,7 @@
  * @license http://www.opensource.org/licenses/mit-license MIT License
  */
 
-namespace PHP\BitTorrent\Tracker;
+namespace PHP\BitTorrent\Tracker\Peer;
 
 /**
  * @package UnitTests
@@ -67,9 +67,16 @@ class PeerTest extends \PHPUnit_Framework_TestCase {
 
     public function testSetGetId() {
         $this->assertNull($this->peer->getId());
-        $id = 'Peer id';
+        $id = str_repeat('a', 20);
         $this->assertSame($this->peer, $this->peer->setId($id));
         $this->assertSame($id, $this->peer->getId());
+    }
+
+    /**
+     * @expectedException InvalidArgumentException
+     */
+    public function testSetInvalidPeerId() {
+        $this->peer->setId('asd');
     }
 
     public function testSetGetPort() {
@@ -77,6 +84,13 @@ class PeerTest extends \PHPUnit_Framework_TestCase {
         $port = 6666;
         $this->assertSame($this->peer, $this->peer->setPort($port));
         $this->assertSame($port, $this->peer->getPort());
+    }
+
+    /**
+     * @expectedException InvalidArgumentException
+     */
+    public function testSetInvalidPort() {
+        $this->peer->setPort(100000);
     }
 
     public function testSetGetDownloaded() {
@@ -94,15 +108,15 @@ class PeerTest extends \PHPUnit_Framework_TestCase {
     }
 
     public function testSetGetLeft() {
-        $this->assertNull($this->peer->getLeft());
+        $this->assertNull($this->peer->getHasLeft());
         $left = 42;
-        $this->assertSame($this->peer, $this->peer->setLeft($left));
-        $this->assertSame($left, $this->peer->getLeft());
+        $this->assertSame($this->peer, $this->peer->setHasLeft($left));
+        $this->assertSame($left, $this->peer->getHasLeft());
     }
 
     public function testIsSeed() {
         $this->assertFalse($this->peer->isSeed());
-        $this->peer->setLeft(0);
+        $this->peer->setHasLeft(0);
         $this->assertTrue($this->peer->isSeed());
     }
 }

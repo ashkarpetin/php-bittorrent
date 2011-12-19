@@ -197,7 +197,7 @@ class Peer implements PeerInterface {
      * @see PHP\BitTorrent\Tracker\Peer\PeerInterface::isSeed()
      */
     public function isSeed() {
-        return ($this->left === 0);
+        return ($this->hasLeft === 0);
     }
 
     /**
