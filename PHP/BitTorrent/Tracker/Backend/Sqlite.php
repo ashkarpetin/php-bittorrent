@@ -1,6 +1,6 @@
 <?php
 /**
- * PHP_BitTorrent
+ * PHP BitTorrent
  *
  * Copyright (c) 2011 Christer Edvartsen <cogo@starzinger.net>
  *
@@ -22,42 +22,62 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  *
- * @package PHP_BitTorrent
+ * @package Backend
  * @author Christer Edvartsen <cogo@starzinger.net>
  * @copyright Copyright (c) 2011, Christer Edvartsen
  * @license http://www.opensource.org/licenses/mit-license MIT License
  */
 
+namespace PHP\BitTorrent\Tracker\Backend;
+
+use PHP\BitTorrent\Tracker\Peer\PeerInterface,
+    PHP\BitTorrent\Tracker\Peer\Peer,
+    PDO,
+    RuntimeException;
+
 /**
- * @package PHP_BitTorrent
+ * @package Backend
  * @author Christer Edvartsen <cogo@starzinger.net>
  * @copyright Copyright (c) 2011, Christer Edvartsen
  * @license http://www.opensource.org/licenses/mit-license MIT License
  */
-class PHP_BitTorrent_Tracker_StorageAdapter_Sqlite extends PHP_BitTorrent_Tracker_StorageAdapter_Abstract {
+class Sqlite implements BackendInterface {
     /**
      * Database resource
      *
      * @var PDO
      */
-    protected $db = null;
+    private $db;
+
+    /**
+     * Backend parameters
+     *
+     * @var array
+     */
+    private $params = array(
+        // Name of the database (required)
+        'database' => null,
+    );
+
+    /**
+     * Class constructor
+     *
+     * @param array $params Parameters for the backend
+     */
+    public function __construct(array $params = array()) {
+        $this->params = array_merge($this->params, $params);
+    }
 
     /**
      * Fetch the database resource
      *
-     * This method will return the current database instance. The first time this method is
-     * executed it will create the resource.
-     *
-     * @throws PHP_BitTorrent_Tracker_StorageAdapter_Sqlite_Exception
+     * @throws RuntimeException
      * @return PDO
      */
-    protected function getDb() {
+    private function getDb() {
         if ($this->db === null) {
-            $database = $this->getParam('database');
-
-            // See if we have a database parameter
-            if (empty($database)) {
-                throw new PHP_BitTorrent_Tracker_StorageAdapter_Sqlite_Exception('Storage adapter missing "database" parameter.');
+            if (empty($this->params['database'])) {
+                throw new RuntimeException('Missing "database" parameter');
             }
 
             try {
@@ -112,7 +132,7 @@ class PHP_BitTorrent_Tracker_StorageAdapter_Sqlite extends PHP_BitTorrent_Tracke
                     sem_release($sem);
                 }
             } catch (PDOException $e) {
-                throw new PHP_BitTorrent_Tracker_StorageAdapter_Sqlite_Exception('Could not open database: ' . $e->getMessage());
+                throw new RuntimeException('Could not open database: ' . $e->getMessage());
             }
         }
 
@@ -120,10 +140,7 @@ class PHP_BitTorrent_Tracker_StorageAdapter_Sqlite extends PHP_BitTorrent_Tracke
     }
 
     /**
-     * See if a torrent exist on the tracker
-     *
-     * @param string $infoHash
-     * @return boolean
+     * @see PHP\BitTorrent\Tracker\Backend\BackendInterface::torrentExists()
      */
     public function torrentExists($infoHash) {
         $sql = "
@@ -142,14 +159,9 @@ class PHP_BitTorrent_Tracker_StorageAdapter_Sqlite extends PHP_BitTorrent_Tracke
     }
 
     /**
-     * See if a peer exists
-     *
-     * @param string $infoHash The info hash of the torrent that the peer is sharing.
-     * @param string $peerId The id of the peer given by the client.
-     * @throws PHP_BitTorrent_Tracker_StorageAdapter_Exception
-     * @return boolean
+     * @see PHP\BitTorrent\Tracker\Backend\BackendInterface::torrentPeerExists()
      */
-    public function torrentPeerExists($infoHash, $peerId) {
+    public function torrentPeerExists($infoHash, Peer $peer) {
         $sql = "
             SELECT
                 p.ip
@@ -164,32 +176,20 @@ class PHP_BitTorrent_Tracker_StorageAdapter_Sqlite extends PHP_BitTorrent_Tracke
                 t.infoHash = :infoHash
         ";
         $stmt = $this->getDb()->prepare($sql);
-        $stmt->execute(array(':peerId' => $peerId, ':infoHash' => $infoHash));
+        $stmt->execute(array(':peerId' => $peer->getId(), ':infoHash' => $infoHash));
         $row = $stmt->fetch();
 
         return !empty($row);
     }
 
     /**
-     * Get peers connected to a torrent
-     *
-     * @param string $infoHash The info hash of the torrent
-     * @param boolean $connectable If we only want connectable peers set this to true. If false we
-     *                             will only get peers that can not be connected to. Set to null to
-     *                             get all peers.
-     * @param int $maxGive Max number of peers to return
-     * @param PHP_BitTorrent_Tracker_Peer $excludePeer Peer to exclude from the list
-     * @return array An array of PHP_BitTorrent_Tracker_Peer objects
+     * @see PHP\BitTorrent\Tracker\Backend\BackendInterface::getTorrentPeers()
      */
-    public function getTorrentPeers($infoHash, $connectable = null, $limit = null, PHP_BitTorrent_Tracker_Peer $excludePeer = null) {
+    public function getTorrentPeers($infoHash, $limit = null, PeerInterface $exclude = null);
         $where = array();
         $where[] = "t.infoHash = :infoHash";
 
-        if ($connectable !== null) {
-            $where[] = "p.connectable = :connectable";
-        }
-
-        if ($excludePeer !== null) {
+        if ($exclude !== null) {
             $where[] = "p.peerId != :excludePeerId";
         }
 
@@ -222,25 +222,21 @@ class PHP_BitTorrent_Tracker_StorageAdapter_Sqlite extends PHP_BitTorrent_Tracke
 
         $stmt->bindValue(':infoHash', $infoHash);
 
-        if ($connectable !== null) {
-            $stmt->bindValue(':connectable', ($connectable === true ? 1 : 0));
-        }
-
-        if ($excludePeer !== null) {
-            $stmt->bindValue(':excludePeerId', $excludePeer->getId());
+        if ($exclude !== null) {
+            $stmt->bindValue(':excludePeerId', $exclude->getId());
         }
 
         $stmt->execute();
         $peers = array();
 
         while ($p = $stmt->fetch()) {
-            $peer = new PHP_BitTorrent_Tracker_Peer();
+            $peer = new Peer();
             $peer->setIp($p['ip'])
                  ->setId($p['peerId'])
                  ->setPort($p['port'])
                  ->setDownloaded($p['downloaded'])
                  ->setUploaded($p['uploaded'])
-                 ->setLeft($p['left']);
+                 ->setHasLeft($p['left']);
 
             $peers[] = $peer;
         }
@@ -249,13 +245,9 @@ class PHP_BitTorrent_Tracker_StorageAdapter_Sqlite extends PHP_BitTorrent_Tracke
     }
 
     /**
-     * Delete a peer connected to a torrent from the database
-     *
-     * @param string $infoHash The info hash of the torrent
-     * @param PHP_BitTorrent_Tracker_Peer $peer The peer to delete
-     * @return boolean
+     * @see PHP\BitTorrent\Tracker\Backend\BackendInterface::deleteTorrentPeer()
      */
-    public function deleteTorrentPeer($infoHash, PHP_BitTorrent_Tracker_Peer $peer) {
+    public function deleteTorrentPeer($infoHash, PeerInterface $peer) {
         $torrentId = $this->getTorrentId($infoHash);
 
         $sql = "
@@ -272,13 +264,9 @@ class PHP_BitTorrent_Tracker_StorageAdapter_Sqlite extends PHP_BitTorrent_Tracke
     }
 
     /**
-     * Add a peer to a torrent
-     *
-     * @param string $infoHash The info hash of the torrent
-     * @param PHP_BitTorrent_Tracker_Peer $peer The peer to add
-     * @return boolean Returns true if the peer is added or false otherwise
+     * @see PHP\BitTorrent\Tracker\Backend\BackendInterface::registerTorrentPeer()
      */
-    public function addTorrentPeer($infoHash, PHP_BitTorrent_Tracker_Peer $peer) {
+    public function registerTorrentPeer($infoHash, PeerInterface $peer) {
         $torrentId = $this->getTorrentId($infoHash);
 
         if (!$torrentId) {
@@ -320,7 +308,7 @@ class PHP_BitTorrent_Tracker_StorageAdapter_Sqlite extends PHP_BitTorrent_Tracke
             ':peerPort'          => $peer->getPort(),
             ':peerUploaded'      => $peer->getUploaded(),
             ':peerDownloaded'    => $peer->getDownloaded(),
-            ':peerLeft'          => $peer->getLeft(),
+            ':peerLeft'          => $peer->getHasLeft(),
             ':peerIsSeed'        => ($peer->isSeed() ? 1 : 0),
             ':time'              => $time,
             ':peerIsConnectable' => ($peer->isConnectable() ? 1 : 0),
@@ -330,13 +318,9 @@ class PHP_BitTorrent_Tracker_StorageAdapter_Sqlite extends PHP_BitTorrent_Tracke
     }
 
     /**
-     * Update information about a peer
-     *
-     * @param string $infoHash The info hash of the torrent
-     * @param PHP_BitTorrent_Tracker_Peer $peer The peer making the request
-     * @return boolean Returns true if the peer is updated or false otherwise
+     * @see PHP\BitTorrent\Tracker\Backend\BackendInterface::updateTorrentPeer()
      */
-    public function updateTorrentPeer($infoHash, PHP_BitTorrent_Tracker_Peer $peer) {
+    public function updateTorrentPeer($infoHash, PeerInterface $peer) {
         $torrentId = $this->getTorrentId($infoHash);
 
         if (!$torrentId) {
@@ -365,7 +349,7 @@ class PHP_BitTorrent_Tracker_StorageAdapter_Sqlite extends PHP_BitTorrent_Tracke
             ':peerPort'          => $peer->getPort(),
             ':peerUploaded'      => $peer->getUploaded(),
             ':peerDownloaded'    => $peer->getDownloaded(),
-            ':peerLeft'          => $peer->getLeft(),
+            ':peerLeft'          => $peer->getHasLeft(),
             ':peerIsSeed'        => ($peer->isSeed() ? 1 : 0),
             ':peerIsConnectable' => ($peer->isConnectable() ? 1 : 0),
             ':peerId'            => $peer->getId(),
@@ -376,13 +360,9 @@ class PHP_BitTorrent_Tracker_StorageAdapter_Sqlite extends PHP_BitTorrent_Tracke
     }
 
     /**
-     * A peer has finished downloading a torrent
-     *
-     * @param string $infoHash The info hash of the torrent
-     * @param PHP_BitTorrent_Tracker_Peer $peer The peer that completed the torrent
-     * @return boolean Returns false on success or false otherwise
+     * @see PHP\BitTorrent\Tracker\Backend\BackendInterface::torrentComplete()
      */
-    public function torrentComplete($infoHash, PHP_BitTorrent_Tracker_Peer $peer) {
+    public function torrentComplete($infoHash, PeerInterface $peer) {
         if ($this->updateTorrentPeer($infoHash, $peer)) {
             $torrentId = $this->getTorrentId($infoHash);
 
@@ -400,20 +380,17 @@ class PHP_BitTorrent_Tracker_StorageAdapter_Sqlite extends PHP_BitTorrent_Tracke
 
             return $stmt->execute(array(
                 ':peerId'    => $peer->getId(),
-                ':torrentId' => $torrentId)
-            );
+                ':torrentId' => $torrentId,
+            ));
         }
 
         return false;
     }
 
     /**
-     * Add a torrent to the tracker
-     *
-     * @param string $infoHash The info hash of the torrent
-     * @return boolean Returns true if the torrent was added, false otherwise
+     * @see PHP\BitTorrent\Tracker\Backend\BackendInterface::registerTorrent()
      */
-    public function addTorrent($infoHash) {
+    public function registerTorrent($infoHash) {
         $torrentId = $this->getTorrentId($infoHash);
 
         // If the torrent already exist, return false
@@ -440,7 +417,7 @@ class PHP_BitTorrent_Tracker_StorageAdapter_Sqlite extends PHP_BitTorrent_Tracke
      * @param string $infoHash The info hash of the torrent
      * @return int The unique ID stored in the database
      */
-    protected function getTorrentId($infoHash) {
+    private function getTorrentId($infoHash) {
         $sql = "
             SELECT
                 _rowid_
