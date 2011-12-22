@@ -80,19 +80,21 @@ class Sqlite implements BackendInterface {
                 throw new RuntimeException('Missing "database" parameter');
             }
 
+            $dbName = $this->params['database'];
+
             try {
                 $createTables = false;
 
                 // See if the database exist. If it does, skip the step that creates the tables
                 // needed.
-                if (!file_exists($database)) {
+                if (!file_exists($dbName)) {
                     $createTables = true;
                 }
 
                 // Get semaphore
                 $sem = sem_get(1);
 
-                $this->db = new PDO('sqlite:' . $database);
+                $this->db = new PDO('sqlite:' . $dbName);
 
                 // Create tables?
                 if ($createTables) {
