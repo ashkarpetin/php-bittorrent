@@ -54,7 +54,7 @@ class Response implements ResponseInterface {
     /**
      * Peers in the response
      *
-     * @var array Array of PHP_BitTorrent_Tracker_Response objects
+     * @var PHP\BitTorrent\Tracker\Peer\PeerInterface[]
      */
     private $peers = array();
 
