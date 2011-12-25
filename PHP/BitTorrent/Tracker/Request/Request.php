@@ -86,7 +86,6 @@ class Request implements RequestInterface {
         'uploaded',
         'downloaded',
         'left',
-        'event',
     );
 
     /**
@@ -241,7 +240,7 @@ class Request implements RequestInterface {
      * @see PHP\BitTorrent\Tracker\Request\RequestInterface::getEvent()
      */
     public function getEvent() {
-        return $this->query['event'];
+        return !empty($this->query['event']) ? $this->query['event'] : '';
     }
 
     /**
