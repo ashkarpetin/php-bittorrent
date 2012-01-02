@@ -68,6 +68,7 @@ class RequestTest extends \PHPUnit_Framework_TestCase {
      */
     public function testRequestWithMissingParameter() {
         $request = new Request();
+        $request->validate();
     }
 
     /**
@@ -78,6 +79,7 @@ class RequestTest extends \PHPUnit_Framework_TestCase {
         $query = $this->query;
         $query['event'] = 'some event';
         $request = new Request($query);
+        $request->validate();
     }
 
     /**
@@ -88,6 +90,7 @@ class RequestTest extends \PHPUnit_Framework_TestCase {
         $query = $this->query;
         $query['port'] = 100000;
         $request = new Request($query);
+        $request->validate();
     }
 
     /**
@@ -98,6 +101,7 @@ class RequestTest extends \PHPUnit_Framework_TestCase {
         $query = $this->query;
         $query['info_hash'] = 'value';
         $request = new Request($query);
+        $request->validate();
     }
 
     /**
@@ -108,6 +112,7 @@ class RequestTest extends \PHPUnit_Framework_TestCase {
         $query = $this->query;
         $query['peer_id'] = 'value';
         $request = new Request($query);
+        $request->validate();
     }
 
     public function testGetIpWithIpInQuery() {
@@ -117,7 +122,7 @@ class RequestTest extends \PHPUnit_Framework_TestCase {
         $this->assertSame($query['ip'], $request->getIp());
     }
 
-    public function testGetIpWithIpServer() {
+    public function testGetIpWithIpInServer() {
         $server = array(
             'HTTP_X_FORWARDED_FOR' => '127.0.0.1',
             'REMOTE_ADDR' => '127.0.0.2',

@@ -45,36 +45,26 @@ use InvalidArgumentException;
  * @link https://github.com/christeredvartsen/php-bittorrent
  */
 class Request implements RequestInterface {
-    /**#@+
-      * Request names that matches the names used in a typical GET request
-      *
-      * @var string
-      */
-     const INFO_HASH     = 'info_hash';
-     const INFO_HASH_HEX = 'info_hash_hex';
-     const PEER_ID       = 'peer_id';
-     const PORT          = 'port';
-     const DOWNLOADED    = 'downloaded';
-     const UPLOADED      = 'uploaded';
-     const LEFT          = 'left';
-     const IP            = 'ip';
-     const USER_AGENT    = 'user_agent';
-     const EVENT         = 'event';
-     /**#@-*/
-
     /**
      * GET data
      *
-     * @var array
+     * @var PHP\BitTorrent\Tracker\Request\ParameterContainer
      */
     private $query;
 
     /**
      * Server data
      *
-     * @var array
+     * @var PHP\BitTorrent\Tracker\Request\ServerContainer
      */
     private $server;
+
+    /**
+     * Request headers
+     *
+     * @var PHP\BitTorrent\Tracker\Request\HeaderContainer
+     */
+    private $headers;
 
     /**
      * Required query parameters
@@ -97,10 +87,9 @@ class Request implements RequestInterface {
      * @param array $server Data from $_SERVER
      */
     public function __construct(array $query = array(), array $server = array()) {
-        $this->query = $query;
-        $this->server = $server;
-
-        $this->validate();
+        $this->query   = new ParameterContainer($query);
+        $this->server  = new ServerContainer($server);
+        $this->headers = new HeaderContainer($this->server->getHeaders());
     }
 
     /**
@@ -108,7 +97,7 @@ class Request implements RequestInterface {
      */
     public function validate() {
         foreach (static::$requiredQueryParams as $key) {
-            if (!isset($this->query[$key])) {
+            if (!$this->query->has($key)) {
                 throw new InvalidArgumentException('Missing query parameter: ' . $key);
             }
         }
@@ -178,7 +167,7 @@ class Request implements RequestInterface {
      * @see PHP\BitTorrent\Tracker\Request\RequestInterface::getInfoHash()
      */
     public function getInfoHash() {
-        return stripslashes($this->query['info_hash']);
+        return stripslashes($this->query->get('info_hash'));
     }
 
     /**
@@ -192,19 +181,19 @@ class Request implements RequestInterface {
      * @see PHP\BitTorrent\Tracker\Request\RequestInterface::getPeerId()
      */
     public function getPeerId() {
-        return stripslashes($this->query['peer_id']);
+        return stripslashes($this->query->get('peer_id'));
     }
 
     /**
      * @see PHP\BitTorrent\Tracker\Request\RequestInterface::getIp()
      */
     public function getIp() {
-        if (isset($this->query['ip'])) {
-            return $this->query['ip'];
-        } else if (isset($this->server['HTTP_X_FORWARDED_FOR'])) {
-            return $this->server['HTTP_X_FORWARDED_FOR'];
-        } else if (isset($this->server['REMOTE_ADDR'])) {
-            return $this->server['REMOTE_ADDR'];
+        if ($this->query->has('ip')) {
+            return $this->query->get('ip');
+        } else if ($this->server->has('HTTP_X_FORWARDED_FOR')) {
+            return $this->server->get('HTTP_X_FORWARDED_FOR');
+        } else if ($this->server->has('REMOTE_ADDR')) {
+            return $this->server->get('REMOTE_ADDR');
         }
 
         return null;
@@ -214,48 +203,55 @@ class Request implements RequestInterface {
      * @see PHP\BitTorrent\Tracker\Request\RequestInterface::getPort()
      */
     public function getPort() {
-        return (int) $this->query['port'];
+        return (int) $this->query->get('port');
     }
 
     /**
      * @see PHP\BitTorrent\Tracker\Request\RequestInterface::getDownloaded()
      */
     public function getDownloaded() {
-        return (int) $this->query['downloaded'];
+        return (int) $this->query->get('downloaded');
     }
 
     /**
      * @see PHP\BitTorrent\Tracker\Request\RequestInterface::getUploaded()
      */
     public function getUploaded() {
-        return (int) $this->query['uploaded'];
+        return (int) $this->query->get('uploaded');
     }
 
     /**
      * @see PHP\BitTorrent\Tracker\Request\RequestInterface::getLeft()
      */
     public function getLeft() {
-        return (int) $this->query['left'];
+        return (int) $this->query->get('left');
     }
 
     /**
      * @see PHP\BitTorrent\Tracker\Request\RequestInterface::getEvent()
      */
     public function getEvent() {
-        return !empty($this->query['event']) ? $this->query['event'] : '';
+        return $this->query->has('event') ? $this->query->get('event') : '';
     }
 
     /**
      * @see PHP\BitTorrent\Tracker\Request\RequestInterface::getNoPeerId()
      */
     public function getNoPeerId() {
-        return !empty($this->query['nopeer_id']) ? true : false;
+        return $this->query->has('nopeer_id') ? true : false;
     }
 
     /**
      * @see PHP\BitTorrent\Tracker\Request\RequestInterface::getCompact()
      */
     public function getCompact() {
-        return !empty($this->query['compact']) ? true : false;
+        return $this->query->has('compact') ? true : false;
+    }
+
+    /**
+     * @see PHP\BitTorrent\Tracker\Request\RequestInterface::getHeaders()
+     */
+    public function getHeaders() {
+        return $this->headers;
     }
 }

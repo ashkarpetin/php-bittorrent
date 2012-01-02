@@ -139,4 +139,11 @@ interface RequestInterface {
      * @param boolean
      */
     function getCompact();
+
+    /**
+     * Get the request headers
+     *
+     * @return PHP\BitTorrent\Tracker\Request\HeaderContainer
+     */
+    function getHeaders();
 }
