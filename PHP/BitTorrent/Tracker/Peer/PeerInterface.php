@@ -27,6 +27,7 @@
  * @author Christer Edvartsen <cogo@starzinger.net>
  * @copyright Copyright (c) 2011, Christer Edvartsen
  * @license http://www.opensource.org/licenses/mit-license MIT License
+ * @link https://github.com/christeredvartsen/php-bittorrent
  */
 
 namespace PHP\BitTorrent\Tracker\Peer;
@@ -39,6 +40,7 @@ namespace PHP\BitTorrent\Tracker\Peer;
  * @author Christer Edvartsen <cogo@starzinger.net>
  * @copyright Copyright (c) 2011, Christer Edvartsen
  * @license http://www.opensource.org/licenses/mit-license MIT License
+ * @link https://github.com/christeredvartsen/php-bittorrent
  */
 interface PeerInterface {
     /**
