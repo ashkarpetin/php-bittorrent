@@ -35,6 +35,7 @@ use PHP\BitTorrent\Tracker\Request\RequestInterface,
     PHP\BitTorrent\Tracker\Response\ResponseInterface,
     PHP\BitTorrent\Tracker\Backend\BackendInterface,
     PHP\BitTorrent\Tracker\Peer\Peer,
+    PHP\BitTorrent\Tracker\EventManager\EventManager,
     InvalidArgumentException,
     RuntimeException;
 
@@ -72,6 +73,13 @@ class Tracker {
     );
 
     /**
+     * An event manager
+     *
+     * @var PHP\BitTorrent\Tracker\EventManager\EventManagerInterface
+     */
+    private $eventManager;
+
+    /**
      * Class constructor
      *
      * @param PHP\BitTorrent\Tracker\Backend\BackendInterface $backend The backend to use
@@ -83,6 +91,18 @@ class Tracker {
         if ($params) {
             $this->setParams($params);
         }
+    }
+
+    /**
+     * Set the event handler
+     *
+     * @param PHP\BitTorrent\Tracker\EventManager\EventManagerInterface
+     * @return PHP\BitTorrent\Tracker\Tracker
+     */
+    public function setEventManager(EventManager $eventManager) {
+        $this->eventManager = $eventManager;
+
+        return $this;
     }
 
     /**
