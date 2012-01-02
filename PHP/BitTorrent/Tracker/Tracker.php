@@ -150,14 +150,14 @@ class Tracker {
      *
      * @param PHP\BitTorrent\Tracker\Request\RequestInterface $request Request from the client
      * @param PHP\BitTorrent\Tracker\Response\ResponseInterface $response The response to the client
-     * @throws RuntimeException
+     * @throws PHP\BitTorrent\Tracker\Exception
      */
     public function serve(RequestInterface $request, ResponseInterface $response) {
         try {
             // Validate the request
             $request->validate();
         } catch (InvalidArgumentException $e) {
-            throw new RuntimeException('Invalid request: ' . $e->getMessage());
+            throw new Exception('Invalid request: ' . $e->getMessage());
         }
 
         // See if the torrent exists
@@ -168,7 +168,7 @@ class Tracker {
             if ($this->getParam('autoRegister')) {
                 $this->backend->registerTorrent($infoHash);
             } else {
-                throw new RuntimeException('Torrent not found on this tracker');
+                throw new Exception('Torrent not found on this tracker');
             }
         }
 
@@ -201,7 +201,7 @@ class Tracker {
                 $this->backend->updateTorrentPeer($infoHash, $peer);
             } else {
                 // Invalid event
-                throw new RuntimeException('Unexpected error');
+                throw new Exception('Unexpected error');
             }
         }
 
