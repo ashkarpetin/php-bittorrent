@@ -31,8 +31,8 @@
 
 namespace PHP\BitTorrent\Tracker\EventManager;
 
-use PHP\BitTorrent\Tracker\Request\RequestInterface;
-use PHP\BitTorrent\Tracker\Response\ResponseInterface;
+use PHP\BitTorrent\Tracker\Request\RequestInterface,
+    PHP\BitTorrent\Tracker\Response\ResponseInterface;
 
 /**
  * Event class
