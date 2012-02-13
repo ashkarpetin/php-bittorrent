@@ -57,9 +57,9 @@ class Torrent {
     private $pieceLengthExp = 18;
 
     /**
-     * The announce URL
+     * The list of announce URLs
      *
-     * @var string
+     * @var string|array
      */
     private $announce;
 
@@ -94,11 +94,11 @@ class Torrent {
     /**
      * Class constructor
      *
-     * @param string $announceUrl Optional announce URL
+     * @param string|array $announce Optional announce URL
      */
-    public function __construct($announceUrl = null) {
-        if ($announceUrl !== null) {
-            $this->setAnnounce($announceUrl);
+    public function __construct($announce = null) {
+        if ($announce !== null) {
+            $this->setAnnounce($announce);
         }
     }
 
@@ -125,9 +125,14 @@ class Torrent {
         // Create a new torrent
         $torrent = new static();
 
-        // Populate the object with data from the file
-        if (isset($decodedFile['announce'])) {
-            $torrent->setAnnounce($decodedFile['announce']);
+        // Populate the object with data from the file        
+        if (isset($decodedFile['announce-list'])) {
+            if (($announceList = self::arrayFlatten($decodedFile['announce-list'])) !== false)
+                $torrent->setAnnounce($announceList);
+        } else { 
+            if (isset($decodedFile['announce'])) {
+                $torrent->setAnnounce($decodedFile['announce']);
+            }
         }
 
         if (isset($decodedFile['comment'])) {
@@ -156,12 +161,12 @@ class Torrent {
      * by Bram Cohen.
      *
      * @param string $path Path to a directory or a single file
-     * @param string $announceUrl URL to the announce
+     * @param string|array $announce URL or list of URLs to the announce
      * @return PHP\BitTorrent\Torrent Returns a new instance of this class
      */
-    static public function createFromPath($path, $announceUrl) {
+    static public function createFromPath($path, $announce) {
         // Create a new torrent instance
-        $torrent = new static($announceUrl);
+        $torrent = new static($announce);
 
         // Initialize array of the files to include in the torrent
         $files = array();
@@ -340,21 +345,21 @@ class Torrent {
     /**
      * Set the announce URL
      *
-     * @param string $announceUrl The URL to set
+     * @param string|array $announce The URL or list of URLs to set
      * @return PHP\BitTorrent\Torrent Returns self for a fluent interface
      */
-    public function setAnnounce($announceUrl) {
-        $this->announce = $announceUrl;
+    public function setAnnounce($announce) {
+        $this->announce = $announce;
 
         return $this;
     }
 
     /**
-     * Get the announce URL
+     * Get the announce URL list
      *
-     * @return string Returns the URL to the tracker (if set)
+     * @return string|array Returns the URL or list of URLs to the tracker (if set)
      */
-    public function getAnnounce() {
+    public function getAnnounce() {        
         return $this->announce;
     }
 
@@ -464,7 +469,18 @@ class Torrent {
         if (empty($announce)) {
             throw new RuntimeException('Announce URL is missing.');
         }
-
+            
+         $announceList = array();   
+         if (!is_array($announce)) {
+             $announceUrl = $announce;
+         } else if (count($announce) > 1){
+             $announce = self::arrayFlatten($announce);
+             $announceUrl = $announce[0];
+             $announceList = array_map(create_function( '$a', 'return (array) $a;'), $announce);
+         } else {
+             $announceUrl = $announce[0];
+         }
+        
         $info = $this->getInfo();
 
         if (empty($info)) {
@@ -481,12 +497,16 @@ class Torrent {
             $createdAt = time();
         }
 
-        $torrent = array(
-            'announce'      => $announce,
-            'creation date' => $createdAt,
-            'info'          => $info,
-        );
-
+        $torrent['announce'] = $announce;
+        
+        if (!empty($announceList)) {
+            $torrent['announce-list'] = $announceList;
+        }          
+         
+        $torrent['creation date'] = $createdAt;
+        
+        $torrent['info'] = $info;
+        
         if (($comment = $this->getComment()) !== null) {
             $torrent['comment'] = $comment;
         }
@@ -587,4 +607,26 @@ class Torrent {
         $encoder = new Encoder();
         return sha1($encoder->encodeDictionary($info));
     }
+    
+    /** 
+     * Flattens an array, or returns FALSE on fail.
+     * 
+     * @param array $array Input multidimensional array
+     * @return array Returns output array
+     */ 
+    static private function arrayFlatten($array) { 
+      if (!is_array($array)) { 
+        return false; 
+      } 
+      $result = array(); 
+      foreach ($array as $key => $value) { 
+        if (is_array($value)) { 
+          $result = array_merge($result, self::arrayFlatten($value)); 
+        } 
+        else { 
+          $result[$key] = $value; 
+        } 
+      } 
+      return $result; 
+    } 
 }
