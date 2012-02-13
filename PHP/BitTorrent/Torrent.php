@@ -573,9 +573,9 @@ class Torrent {
     }
     
     /**
-     * Get the info hash
+     * Get the hash info
      *
-     * @return string Returns the info hash of the torrent
+     * @return string Returns the hash info of the torrent
      */
     public function getHash() {
         $info = $this->getInfo();
