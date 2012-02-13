@@ -441,7 +441,7 @@ class Torrent {
     public function getInfo() {
         return $this->info;
     }
-
+    
     /**
      * Save the current torrent object to the specified filename
      *
@@ -570,5 +570,21 @@ class Torrent {
         }
 
         return $info['name'];
+    }
+    
+    /**
+     * Get the info hash
+     *
+     * @return string Returns the info hash of the torrent
+     */
+    public function getHash() {
+        $info = $this->getInfo();
+
+        if ($info === null) {
+            throw new RuntimeException('The info part of the torrent is not set.');
+        }
+        
+        $encoder = new Encoder();
+        return sha1($encoder->encodeDictionary($info));
     }
 }
